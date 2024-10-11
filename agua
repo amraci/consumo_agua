@@ -1,0 +1,49 @@
+import dash
+from dash import dcc, html
+from dash.dependencies import Input, Output
+import pandas as pd
+import plotly.express as px
+df = pd.read_excel('D:/consumo_caesb.xlsx')
+app = dash.Dash(__name__)
+app.layout = html.Div([
+    html.H1("Dashboard de Consumo de Água"),
+    dcc.Dropdown(
+        id='tipo-consumo',
+        options=[
+           # {'label': 'Consumo Total', 'value': 'total'},
+            {'label': 'Consumo Médio', 'value': 'medio'},
+        ],
+        value='medio'
+    ),
+    dcc.Dropdown(
+        id='filtro-unidade',
+        options=[{'label': unidade, 'value': unidade} for unidade in df['Sigla'].unique()],
+        value=df['Sigla'].unique()[0],  # Valor padrão
+        multi=False
+    ),
+    dcc.Graph(id='grafico-consumo')
+])
+@app.callback(
+    Output('grafico-consumo', 'figure'),
+    [Input('tipo-consumo', 'value'),
+     Input('filtro-unidade', 'value')]
+)
+def atualizar_grafico(tipo, unidade):
+    # Filtrar o dataframe pela unidade selecionada
+    df_filtrado = df[df['Sigla'] == unidade]
+
+    #if tipo == 'total':
+    #    fig = px.line(df_filtrado, x='Comp', y='Metro', title=f'Consumo Total de Água - {unidade}')                 
+    #else:
+    media = df_filtrado['Metro'].median()
+    fig = px.bar(df_filtrado, x='Comp', y='Metro', title=f'Consumo Médio de Água - {unidade}', 
+                     text=df_filtrado['Metro'].apply(lambda x: f'{x/media:.2%}'))     
+               
+
+     # Adicionando a linha da média
+    fig.add_hline(y=media, line_dash="dash", line_color="red", 
+                      annotation_text="Mediana", annotation_position="bottom right")
+        
+    return fig
+if __name__ == '__main__':
+    app.run_server(debug=True)
